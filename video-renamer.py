@@ -22,18 +22,31 @@ import logging
 
 import sys
 
+# List of exit codes:
+# 0: Everything went as planned.
+# 1: Help is printed.
+# 2: Version is printed.
+
 if __name__ == '__main__':
 
     # Let's start with building the argument parser.
-    argument_parser = argparse.ArgumentParser()
-    argument_parser.description = 'Rename many video files using their meta data with ease.'
+    argumentParser = argparse.ArgumentParser()
+    argumentParser.description = 'Rename many video files using their meta data with ease.'
+
+    # Optional arguments are below.
+    argumentParser.add_argument ('--alternative-exiftool', help = 'Use an alternative exiftool binary, instead of the installed one.')
+    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'store_true')
+    argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'store_true')
 
     # TODO: Add the options here.
-    #       - Define external exiftool path.
     #       - Ability to define many files.
-    arguments = argument_parser.parse_args()
+    arguments = argumentParser.parse_args()
 
     # Print the help if no arguments are given.
     if len(sys.argv) <= 1:
-        argument_parser.print_help()
-        sys.exit(1) # Exit with some code to show something went wrong.
+        argumentParser.print_help()
+        sys.exit (1) # Exit with some code to show something went wrong.
+
+    if arguments.version:
+        print (argumentParser.prog + ' version 0.0.1')
+        sys.exit (2) # Exit with a distinct error code to indicate what happened.
