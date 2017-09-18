@@ -53,6 +53,6 @@ if __name__ == '__main__':
     argumentParser.add_argument ('--fat32-safe', help = 'Rename files only with FAT32 safe characters.', action = 'store_true')
     argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
     argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'version', version = argumentParser.prog + ' version 0.0.1')
-    argumentParser.add_argument ('FILE', help = 'File to be renamed.', nargs = '+')
+    argumentParser.add_argument ('FILE', help = 'File(s) to be renamed.', nargs = '+')
 
     arguments = argumentParser.parse_args()
