@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     # Optional arguments are below.
     argumentParser.add_argument ('--alternative-exiftool', metavar = 'EXIFTOOL_PATH', help = 'Use an alternative exiftool binary, instead of the installed one.')
-    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'store_true')
+    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'count')
     argumentParser.add_argument ('--fat32-safe', help = 'Rename files only with FAT32 safe characters.', action = 'store_true')
     argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
     argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'version', version = argumentParser.prog + ' version 0.0.1')
