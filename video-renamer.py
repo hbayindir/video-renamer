@@ -26,11 +26,48 @@ import sys
 # 0: Everything went as planned.
 # 1: NOT IMPLEMENTED.
 
+# TODO: Implement quiet switch.
+
+
 if __name__ == '__main__':
-    
+
+    # This is the global logging level. Will be changed with verbosity if required in the future.
+    LOGGING_LEVEL = logging.ERROR
+
+    # Let's start with building the argument parser.
+    argumentParser = argparse.ArgumentParser()
+    argumentParser.description = 'Rename many video files using their meta data with ease.'
+
+    # Optional arguments are below.
+    argumentParser.add_argument ('--alternative-exiftool', metavar = 'EXIFTOOL_PATH', help = 'Use an alternative exiftool binary, instead of the installed one.')
+    # Count gives the number of '-v' s provided. So one can handle the verbosity easily.
+    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'count')
+    argumentParser.add_argument ('-q', '--quiet', help = 'Do not print anything to console.', action = 'store_true') # Will override --verbose.
+    argumentParser.add_argument ('--fat32-safe', help = 'Rename files only with FAT32 safe characters.', action = 'store_true')
+    argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
+
+    # Ability to handle version in-library is nice.
+    argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'version', version = argumentParser.prog + ' version 0.0.1')
+
+    # Mandatory FILE(s) argument. nargs = '+' means "at least one, but can provide more if you wish"
+    argumentParser.add_argument ('FILE', help = 'File(s) to be renamed.', nargs = '+')
+
+    arguments = argumentParser.parse_args()
+
+    # At this point we have the required arguments, let's start with logging duties.
+    print (arguments)
+
+    if arguments.verbose != None:
+        if arguments.verbose == 1:
+            LOGGING_LEVEL = logging.WARN
+        elif arguments.verbose == 2:
+            LOGGING_LEVEL = logging.INFO
+        elif arguments.verbose >= 3:
+            LOGGING_LEVEL = logging.DEBUG
+
     # Set the logging level first:
     try:
-        logging.basicConfig(filename = None, level = logging.DEBUG,
+        logging.basicConfig(filename = None, level = LOGGING_LEVEL,
                             format = '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
                             datefmt = '%Y-%m-%d %H:%M:%S')
 
@@ -42,17 +79,3 @@ if __name__ == '__main__':
     except IOError as exception:
         print ('Something about disk I/O went bad: ' + str(exception))
         sys.exit(1)
-
-    # Let's start with building the argument parser.
-    argumentParser = argparse.ArgumentParser()
-    argumentParser.description = 'Rename many video files using their meta data with ease.'
-
-    # Optional arguments are below.
-    argumentParser.add_argument ('--alternative-exiftool', metavar = 'EXIFTOOL_PATH', help = 'Use an alternative exiftool binary, instead of the installed one.')
-    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'count')
-    argumentParser.add_argument ('--fat32-safe', help = 'Rename files only with FAT32 safe characters.', action = 'store_true')
-    argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
-    argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'version', version = argumentParser.prog + ' version 0.0.1')
-    argumentParser.add_argument ('FILE', help = 'File(s) to be renamed.', nargs = '+')
-
-    arguments = argumentParser.parse_args()
