@@ -17,14 +17,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Import core packages first.
+import sys
+
+# Then utilities.
 import argparse
 import logging
 
-import sys
+# External packages come last.
+import exiftool
 
 # List of exit codes:
 # 0: Everything went as planned.
-# 1: NOT IMPLEMENTED.
+# 1: Cannot initialize logging subsystem.
+# 2: Exiftool is not found.
 
 # TODO: Implement quiet switch.
 
@@ -55,9 +61,7 @@ if __name__ == '__main__':
     arguments = argumentParser.parse_args()
 
     # At this point we have the required arguments, let's start with logging duties.
-    print (arguments)
-
-    if arguments.verbose != None:
+    if arguments.verbose != None :
         if arguments.verbose == 1:
             LOGGING_LEVEL = logging.WARN
         elif arguments.verbose == 2:
@@ -79,3 +83,11 @@ if __name__ == '__main__':
     except IOError as exception:
         print ('Something about disk I/O went bad: ' + str(exception))
         sys.exit(1)
+    
+    # If the logger is up, we can start building the PyExifTool wrapper.
+    try:
+        with exiftool.ExifTool(executable_ = arguments.alternative_exiftool) as et:
+            metadata = et.get_metadata_batch(files)
+    except FileNotFoundError as exception:
+        localLogger.error('Exiftool binary is not found, exiting.')
+        sys.exit (2)
