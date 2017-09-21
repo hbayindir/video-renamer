@@ -18,11 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Import core packages first.
+import os
 import sys
 
 # Then utilities.
 import argparse
 import logging
+import glob
 
 # External packages come last.
 import exiftool
@@ -30,7 +32,8 @@ import exiftool
 # List of exit codes:
 # 0: Everything went as planned.
 # 1: Cannot initialize logging subsystem.
-# 2: Exiftool is not found.
+# 2: No files to rename.
+# 3: Exiftool is not found.
 
 # TODO: Implement quiet switch.
 
@@ -47,10 +50,11 @@ if __name__ == '__main__':
     # Optional arguments are below.
     argumentParser.add_argument ('--alternative-exiftool', metavar = 'EXIFTOOL_PATH', help = 'Use an alternative exiftool binary, instead of the installed one.')
     # Count gives the number of '-v' s provided. So one can handle the verbosity easily.
-    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'count')
-    argumentParser.add_argument ('-q', '--quiet', help = 'Do not print anything to console.', action = 'store_true') # Will override --verbose.
     argumentParser.add_argument ('--fat32-safe', help = 'Rename files only with FAT32 safe characters.', action = 'store_true')
     argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
+    argumentParser.add_argument ('-r', '--recursive', help = 'Work recursively on the given path.', action = 'store_true')
+    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'count')
+    argumentParser.add_argument ('-q', '--quiet', help = 'Do not print anything to console.', action = 'store_true') # Will override --verbose.
 
     # Ability to handle version in-library is nice.
     argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'version', version = argumentParser.prog + ' version 0.0.1')
@@ -83,11 +87,38 @@ if __name__ == '__main__':
     except IOError as exception:
         print ('Something about disk I/O went bad: ' + str(exception))
         sys.exit(1)
-    
+
+    localLogger.debug ('Parsed arguments are %s', arguments)
+    # Need to expand the files with glob first.
+    filesToWorkOn = list ()
+
+    # Let's get the passed files from arguments, and work on them.
+    localLogger.debug ('Files to be processed are: %s', arguments.FILE)
+
+    # File path handling is not easy. We need to expand the vars, the user and glob it to see how many files we get.
+    # Oh, don't forget the recursive switch too.
+    for inputFile in arguments.FILE:
+        possibleFiles = glob.glob (os.path.expanduser (os.path.expandvars (inputFile)), recursive = arguments.recursive)
+
+        # Not all returned glob paths are existing files. We need to verify each one.
+        # The loop is here, because glob expands regex to independent files.
+        for possibleFile in possibleFiles:
+            if os.path.isfile (possibleFile):
+                filesToWorkOn.append(possibleFile)
+
+    # This is the final list we work on. It may be empty or, well... long.
+    localLogger.debug ('Final file list is: %s', filesToWorkOn)
+    localLogger.info ('Matched %d files to rename.', len(filesToWorkOn))
+
+
+    if len(filesToWorkOn) == 0:
+        localLogger ('No files match againts the given FILE arguments, aborting.')
+        sys.exit (2)
+
     # If the logger is up, we can start building the PyExifTool wrapper.
     try:
         with exiftool.ExifTool(executable_ = arguments.alternative_exiftool) as et:
             metadata = et.get_metadata_batch(files)
     except FileNotFoundError as exception:
-        localLogger.error('Exiftool binary is not found, exiting.')
-        sys.exit (2)
+        localLogger.error ('Exiftool binary is not found, exiting.')
+        sys.exit (3)
