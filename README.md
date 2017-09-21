@@ -8,7 +8,7 @@ Video Renamer is a tool to rename video files according to their meta data.
 
 Simple. I have saved many TED Talks, and wants them to be named neatly. I still download them, hence wanted a better way to rename, since they have nice, full metadata embedded.
 
-Also, please see this [XKCD comic](https://xkcd.com/1319/). Really.
+Also, because [XKCD](http://www.xkcd.com)!
 
 ![Obligatory XKCD](https://imgs.xkcd.com/comics/automation.png)
 
