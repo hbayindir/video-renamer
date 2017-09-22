@@ -112,13 +112,16 @@ if __name__ == '__main__':
 
 
     if len(filesToWorkOn) == 0:
-        localLogger ('No files match againts the given FILE arguments, aborting.')
+        localLogger.error ('No files match againts the given FILE arguments, aborting.')
         sys.exit (2)
 
     # If the logger is up, we can start building the PyExifTool wrapper.
     try:
         with exiftool.ExifTool(executable_ = arguments.alternative_exiftool) as et:
-            metadata = et.get_metadata_batch(files)
+            fileMetadata = et.get_metadata_batch(filesToWorkOn)
+            
+            for metadata in fileMetadata:
+                localLogger.info ("Title of the file " + metadata["SourceFile"] + ": " +  metadata["QuickTime:Title"])
     except FileNotFoundError as exception:
         localLogger.error ('Exiftool binary is not found, exiting.')
         sys.exit (3)
