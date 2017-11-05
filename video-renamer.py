@@ -88,12 +88,16 @@ if __name__ == '__main__':
         print ('Something about disk I/O went bad: ' + str(exception))
         sys.exit(1)
 
-    localLogger.debug ('Parsed arguments are %s', arguments)
     # Need to expand the files with glob first.
     filesToWorkOn = list ()
 
+    # Let's print some information about the passed parameters.
+    localLogger.debug('Recursiveness is set to %s.', arguments.recursive)
+    localLogger.debug('FAT32 safety is set to %s.', arguments.fat32_safe)
+    localLogger.debug('Console friendliness is set to %s.', arguments.console_friendly)
+
     # Let's get the passed files from arguments, and work on them.
-    localLogger.debug ('Files to be processed are: %s', arguments.FILE)
+    localLogger.debug ('Files to be processed are: %s.', arguments.FILE)
 
     # File path handling is not easy. We need to expand the vars, the user and glob it to see how many files we get.
     # Oh, don't forget the recursive switch too.
