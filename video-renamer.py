@@ -50,7 +50,7 @@ if __name__ == '__main__':
     argumentParser.add_argument ('--fat32-safe', help = 'Rename files only with FAT32 safe characters.', action = 'store_true')
     argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
     argumentParser.add_argument ('-r', '--recursive', help = 'Work recursively on the given path.', action = 'store_true')
-    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'count')
+    argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process. Using more than one -v increases verbosity.', action = 'count')
     argumentParser.add_argument ('-q', '--quiet', help = 'Do not print anything to console (overrides verbose).', action = 'store_true') # Will override --verbose.
 
     # Ability to handle version in-library is nice.
@@ -72,8 +72,7 @@ if __name__ == '__main__':
 
     # Set the logging level first:
     try:
-        logging.basicConfig(filename = None, level = LOGGING_LEVEL,
-                            format = '%(levelname)s: %(message)s')
+        logging.basicConfig(filename = None, level = LOGGING_LEVEL, format = '%(levelname)s: %(message)s')
 
         # Get the loca"l logger and start.
         localLogger = logging.getLogger('main')
@@ -85,7 +84,7 @@ if __name__ == '__main__':
         localLogger.debug('Logger setup completed.')
         localLogger.debug('%s is starting.', sys.argv[0])
     except IOError as exception:
-        print ('Something about disk I/O went bad: ' + str(exception))
+        print ('Something about disk I/O went bad: ' + str(exception), file = sys.stderr)
         sys.exit(1)
 
     # Need to expand the files with glob first.
@@ -102,7 +101,7 @@ if __name__ == '__main__':
     # File path handling is not easy. We need to expand the vars, the user and glob it to see how many files we get.
     # Oh, don't forget the recursive switch too.
     for inputFile in arguments.FILE:
-        possibleFiles = glob.glob (os.path.expanduser (os.path.expandvars (inputFile)), recursive = arguments.recursive)
+        possibleFiles = glob.iglob (os.path.expanduser (os.path.expandvars (inputFile)), recursive = arguments.recursive)
 
         # Not all returned glob paths are existing files. We need to verify each one.
         # The loop is here, because glob expands regex to independent files.
