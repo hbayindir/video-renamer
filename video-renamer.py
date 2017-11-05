@@ -83,7 +83,8 @@ if __name__ == '__main__':
         localLogger = logging.getLogger('main')
 
         # Disable logging if quiet switch is set.
-        logging.disable(logging.CRITICAL)
+        if arguments.quiet == True:
+            logging.disable(logging.CRITICAL)
 
         localLogger.debug('Logger setup completed.')
         localLogger.debug('%s is starting.', sys.argv[0])
