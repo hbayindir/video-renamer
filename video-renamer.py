@@ -35,9 +35,6 @@ import exiftool
 # 2: No files to rename.
 # 3: Exiftool is not found.
 
-# TODO: Implement quiet switch.
-
-
 if __name__ == '__main__':
 
     # This is the global logging level. Will be changed with verbosity if required in the future.
@@ -76,15 +73,14 @@ if __name__ == '__main__':
     # Set the logging level first:
     try:
         logging.basicConfig(filename = None, level = LOGGING_LEVEL,
-                            format = '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
-                            datefmt = '%Y-%m-%d %H:%M:%S')
+                            format = '%(levelname)s: %(message)s')
 
         # Get the loca"l logger and start.
         localLogger = logging.getLogger('main')
 
         # Disable logging if quiet switch is set.
         if arguments.quiet == True:
-            logging.disable(logging.CRITICAL)
+            logging.disable(logging.CRITICAL) # Critical is the highest built-in level. This line disables CRITICAL and below.
 
         localLogger.debug('Logger setup completed.')
         localLogger.debug('%s is starting.', sys.argv[0])
@@ -125,7 +121,8 @@ if __name__ == '__main__':
             fileMetadata = et.get_metadata_batch(filesToWorkOn)
 
             for metadata in fileMetadata:
-                localLogger.info ("Title of the file " + metadata["SourceFile"] + ": " +  metadata["QuickTime:Title"])
+                # localLogger.info ("Title of the file " + metadata["SourceFile"] + ": " +  metadata["QuickTime:Title"])
+                pass
     except FileNotFoundError as exception:
         localLogger.error ('Exiftool binary is not found, exiting.')
         sys.exit (3)
