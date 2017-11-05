@@ -54,7 +54,7 @@ if __name__ == '__main__':
     argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
     argumentParser.add_argument ('-r', '--recursive', help = 'Work recursively on the given path.', action = 'store_true')
     argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process.', action = 'count')
-    argumentParser.add_argument ('-q', '--quiet', help = 'Do not print anything to console.', action = 'store_true') # Will override --verbose.
+    argumentParser.add_argument ('-q', '--quiet', help = 'Do not print anything to console (overrides verbose).', action = 'store_true') # Will override --verbose.
 
     # Ability to handle version in-library is nice.
     argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'version', version = argumentParser.prog + ' version 0.0.1')
@@ -81,6 +81,9 @@ if __name__ == '__main__':
 
         # Get the loca"l logger and start.
         localLogger = logging.getLogger('main')
+
+        # Disable logging if quiet switch is set.
+        logging.disable(logging.CRITICAL)
 
         localLogger.debug('Logger setup completed.')
         localLogger.debug('%s is starting.', sys.argv[0])
@@ -119,7 +122,7 @@ if __name__ == '__main__':
     try:
         with exiftool.ExifTool(executable_ = arguments.alternative_exiftool) as et:
             fileMetadata = et.get_metadata_batch(filesToWorkOn)
-            
+
             for metadata in fileMetadata:
                 localLogger.info ("Title of the file " + metadata["SourceFile"] + ": " +  metadata["QuickTime:Title"])
     except FileNotFoundError as exception:
