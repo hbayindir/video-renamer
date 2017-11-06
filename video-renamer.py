@@ -36,19 +36,33 @@ import exiftool
 # 3: Exiftool is not found.
 
 '''
-normalizeFileName = Check the filename string and modify the string if required.
+normalizeFileName: Check the filename string and modify the string if required.
 
 This function will make sure that the file names are UNIX safe, and will support more
 restrictive modes.
 
+- UNIX compatibility will assume that only '/' and NULL is invalid.
 - FAT32 Safe: Will only use FAT32 safe characters.
 - Console Friendly: Will only use characters which doesn't need escaping in UNIX shells.
+
+This function will change all restricted characters and console-unfriendly characters with '_'.
 '''
 def normalizeFileName (fileName, fat32Safe = False, consoleFriendly = False):
-    pass
+    # Get the lgger and print some debug information.
+    localLogger = logging.getLogger ('normalizeFileName')
+    localLogger.debug('File name to normalize is "%s"', fileName)
+    localLogger.debug('FAT32 safety is set to %s', fat32Safe)
+    localLogger.debug('Console friendly renaming is set to %s', consoleFriendly)
+    
+    # Standard file treatments
+    normalizedFileName = fileName.strip()
+    
+    # Let's change the '/' character.
+    normalizedFileName = fileName.replace('/', '_')
+    
+    return normalizedFileName
 
 if __name__ == '__main__':
-
     # This is the global logging level. Will be changed with verbosity if required in the future.
     LOGGING_LEVEL = logging.ERROR
 
