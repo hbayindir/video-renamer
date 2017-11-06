@@ -35,6 +35,18 @@ import exiftool
 # 2: No files to rename.
 # 3: Exiftool is not found.
 
+'''
+normalizeFileName = Check the filename string and modify the string if required.
+
+This function will make sure that the file names are UNIX safe, and will support more
+restrictive modes.
+
+- FAT32 Safe: Will only use FAT32 safe characters.
+- Console Friendly: Will only use characters which doesn't need escaping in UNIX shells.
+'''
+def normalizeFileName (fileName, fat32Safe = False, consoleFriendly = False):
+    pass
+
 if __name__ == '__main__':
 
     # This is the global logging level. Will be changed with verbosity if required in the future.
@@ -43,6 +55,7 @@ if __name__ == '__main__':
     # Let's start with building the argument parser.
     argumentParser = argparse.ArgumentParser()
     argumentParser.description = 'Rename many video files using their meta data with ease.'
+    argumentParser.epilog = 'In order to match recursive files correctly, please put your wildcard containing paths into single quotes.'
 
     # Optional arguments are below.
     argumentParser.add_argument ('--alternative-exiftool', metavar = 'EXIFTOOL_PATH', help = 'Use an alternative exiftool binary, instead of the installed one.')
@@ -117,7 +130,7 @@ if __name__ == '__main__':
     if len(filesToWorkOn) == 0:
         localLogger.error ('No files match againts the given FILE arguments, aborting.')
         sys.exit (2)
-
+        
     # If the logger is up, we can start building the PyExifTool wrapper.
     try:
         with exiftool.ExifTool(executable_ = arguments.alternative_exiftool) as et:
