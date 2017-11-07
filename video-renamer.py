@@ -28,6 +28,7 @@ import glob
 
 # External packages come last.
 import exiftool
+from locale import normalize
 
 # List of exit codes:
 # 0: Everything went as planned.
@@ -55,17 +56,27 @@ def normalizeFileName (fileName, fat32Safe = False, consoleFriendly = False):
     localLogger.debug('Console friendly renaming is set to %s', consoleFriendly)
     
     # Standard file treatments
-    normalizedFileName = fileName.strip()
+    fileName = fileName.strip()
     
-    # Let's change the '/' character.
-    normalizedFileName = fileName.replace('/', '_')
+    # Let's change the '/' character. This is not valid neither in UNIX nor Windows
+    fileName = fileName.replace('/', '_')
     
-    return normalizedFileName
+    # Replace the characters which need replace in FAT32. Got the tip from a tooltip (https://i.stack.imgur.com/2Jit2.png).
+    if fat32Safe:
+        for character in ['\\', ':', '*', '?', '"', '<', '>', '|']:
+            fileName = fileName.replace(character, '_')
+    
+    # Replace characters which needs escaping. Got the list from holy stackoverflow (https://unix.stackexchange.com/q/270977/13922)
+    if consoleFriendly:
+        for character in ['`', '~', '!', '#', '$', '&', '*', '(', ')', '\t', '[', ']', '{', '}', '|', '\\', ';', '\'', '"', '<', '>', '?', ' ']:
+            fileName = fileName.replace(character, '_')
+    
+    return fileName
 
 if __name__ == '__main__':
     # This is the global logging level. Will be changed with verbosity if required in the future.
     LOGGING_LEVEL = logging.ERROR
-
+    
     # Let's start with building the argument parser.
     argumentParser = argparse.ArgumentParser()
     argumentParser.description = 'Rename many video files using their meta data with ease.'
