@@ -28,7 +28,6 @@ import glob
 
 # External packages come last.
 import exiftool
-from locale import normalize
 
 # List of exit codes:
 # 0: Everything went as planned.
@@ -73,6 +72,34 @@ def normalizeFileName (fileName, fat32Safe = False, consoleFriendly = False):
     
     return fileName
 
+'''
+This function searches for a field name inside the metadata dictionary.
+Since the ExifTool provides field names unprocessed(*), we need to look
+for a field name that we want.
+
+*: ExifTool provides the field names with its belonging class to find them easier (e.g.: QuickTime:Title, Composite:Rotation).
+'''
+def findField (metadata, fieldToFind):
+    localLogger = logging.getLogger('findField')
+    localLogger.debug('Will search for field %s', fieldToFind)
+    
+    foundFields = list ()
+    
+    # We need to search this stuff one by one.
+    # A loop, and text processing. A recipe for low performance code.
+    for field in metadata:
+        processedField = field.strip().split(':')
+        localLogger.debug('Field %s is processed as %s.', field, processedField)
+        
+        for processedFieldElement in processedField:
+            if str(processedFieldElement) == fieldToFind:
+                localLogger.debug('Field %s contains the field name we are searching for, adding to results.', field)
+                foundFields.append(metadata[field])
+        
+    
+    localLogger.debug('Found %s field(s) in metadata, returning results.', str(len(foundFields)))
+    return foundFields
+
 if __name__ == '__main__':
     # This is the global logging level. Will be changed with verbosity if required in the future.
     LOGGING_LEVEL = logging.ERROR
@@ -88,24 +115,30 @@ if __name__ == '__main__':
     argumentParser.add_argument ('--fat32-safe', help = 'Rename files only with FAT32 safe characters.', action = 'store_true')
     argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
     argumentParser.add_argument ('-r', '--recursive', help = 'Work recursively on the given path.', action = 'store_true')
+    argumentParser.add_argument ('--dry-run', help = 'Do not actually rename files, print actions to be taken (implies -vv).', action = 'store_true')
     argumentParser.add_argument ('-v', '--verbose', help = 'Print more detail about the process. Using more than one -v increases verbosity.', action = 'count')
     argumentParser.add_argument ('-q', '--quiet', help = 'Do not print anything to console (overrides verbose).', action = 'store_true') # Will override --verbose.
 
     # Ability to handle version in-library is nice.
-    argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'version', version = argumentParser.prog + ' version 0.0.1')
+    argumentParser.add_argument ('-V', '--version', help = 'Print ' + argumentParser.prog + ' version and exit.', action = 'version', version = argumentParser.prog + ' version 0.0.2')
 
     # Mandatory FILE(s) argument. nargs = '+' means "at least one, but can provide more if you wish"
     argumentParser.add_argument ('FILE', help = 'File(s) to be renamed.', nargs = '+')
 
     arguments = argumentParser.parse_args()
 
+    if arguments.verbose == None:
+        arguments.verbose = 0;
+
+    # Elevate logging level if dry run is enabled.
+    if arguments.dry_run == True and arguments.verbose < 2:
+        arguments.verbose = 1;
+
     # At this point we have the required arguments, let's start with logging duties.
     if arguments.verbose != None :
         if arguments.verbose == 1:
-            LOGGING_LEVEL = logging.WARN
-        elif arguments.verbose == 2:
             LOGGING_LEVEL = logging.INFO
-        elif arguments.verbose >= 3:
+        elif arguments.verbose == 2:
             LOGGING_LEVEL = logging.DEBUG
 
     # Set the logging level first:
@@ -162,8 +195,26 @@ if __name__ == '__main__':
             fileMetadata = et.get_metadata_batch(filesToWorkOn)
 
             for metadata in fileMetadata:
-                # localLogger.info ("Title of the file " + metadata["SourceFile"] + ": " +  metadata["QuickTime:Title"])
-                pass
+                # Need to search for a title field here. Let's take a look.
+                requestedField = findField(metadata, 'Title')
+                                                
+                # We may have metadata collision, warn people.                                                
+                if len(requestedField) > 1:
+                    localLogger.warning ('There a more than one field which contains the title. Please make sure the file is renamed correctly.')
+                
+                if len(requestedField) == 0:
+                    localLogger.error ('No matching fields found for file %s, will skip.', metadata['File:FileName'])
+                    continue
+                                
+                # Get the normalized file name and add the extension. Make extension lower case to make things look better.
+                normalizedFileName = normalizeFileName(requestedField[0], fat32Safe = arguments.fat32_safe, consoleFriendly = arguments.console_friendly) + '.' + metadata['File:FileTypeExtension'].lower()
+                
+                # Talk to me!
+                localLogger.info('Will rename file %s to %s.', metadata['File:FileName'], normalizedFileName )
+                         
+                if arguments.dry_run == False:
+                    os.rename(metadata['File:Directory'] + '/' + metadata['File:FileName'], metadata['File:Directory'] + '/' + normalizedFileName)
+                
     except FileNotFoundError as exception:
-        localLogger.error ('Exiftool binary is not found, exiting.')
+        localLogger.error (exception)
         sys.exit (3)

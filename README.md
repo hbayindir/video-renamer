@@ -1,7 +1,5 @@
 # Video Renamer
 
-**Disclaimer:** This is a work in progress. Code may be broken, take your cat as hostage or burn your whole house down. Handle with care.
-
 Video Renamer is a tool to rename video files according to their meta data.
 
 ## Why?
