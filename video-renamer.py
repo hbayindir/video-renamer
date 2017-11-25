@@ -213,7 +213,13 @@ if __name__ == '__main__':
                 localLogger.info('Will rename file %s to %s.', metadata['File:FileName'], normalizedFileName )
                          
                 if arguments.dry_run == False:
-                    os.rename(metadata['File:Directory'] + '/' + metadata['File:FileName'], metadata['File:Directory'] + '/' + normalizedFileName)
+                    try:
+                        os.rename(metadata['File:Directory'] + '/' + metadata['File:FileName'], metadata['File:Directory'] + '/' + normalizedFileName)
+                    except OSError as exception:
+                        if exception.errno == 22:
+                            localLogger.error('Cannot rename file "%s", some characters may not be supported on this filesystem. Please try --fat32-safe.', metadata['File:FileName'])
+                        else:
+                            localLogger.error("Cannot rename file %s, an exception ocurred: %s", metadata['File:FileName'], exception)
                 
     except FileNotFoundError as exception:
         localLogger.error (exception)
