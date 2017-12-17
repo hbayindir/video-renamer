@@ -13,5 +13,6 @@ Also, because [XKCD](http://www.xkcd.com)!
 ## Dependencies
 
 - The tool requires `exiftool` to read actual meta data. For Debian and its derivatives, `exiftool` can be installed by installing the `libimage-exiftool-perl` package.
+- The tool requires `psutil` for detecting filesystems automatically (to select character sets during file renaming). For Debian and derivatives, `psutil` can be installed by installing the `python3-psutil` package.
 - The code uses and bundles a recent (generally latest) version of smarnach's `pyexiftool` wrapper. See the source [here](https://github.com/smarnach/pyexiftool).
 - The code is written to run with `python3` and will not work on **Python 2.x** environments.
