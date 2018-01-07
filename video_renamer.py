@@ -125,7 +125,7 @@ def getLocalFileSystemType ():
         splitPath = os.path.split (mountPoint)
         
         if splitPath[1] == '':
-            localLogger.warn ('Cannot detect filesystem automatically. will assume full character set.')
+            localLogger.warn ('Cannot find the mount point for filesystem detection.')
             return None
         
         mountPoint = os.path.split (mountPoint)[0]
@@ -141,7 +141,7 @@ def getLocalFileSystemType ():
             return disk.fstype 
     
     # If we cannot find the filesystem type, write a warning and return None.
-    locallogger.warn ('Cannot locate filesystem type for mount point %s. Will assume full character set.')
+    locallogger.warn ('Cannot locate filesystem type for mount point %s.')
     
     return None
 
