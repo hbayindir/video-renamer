@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-
 # Video Renamer - A small tool to rename many video files at once using their meta data.
 # Copyright (C) 2017  Hakan Bayindir
 #
@@ -81,19 +80,19 @@ for a field name that we want.
 *: ExifTool provides the field names with its belonging class to find them easier (e.g.: QuickTime:Title, Composite:Rotation).
 '''
 def findField (metadata, fieldToFind):
-    localLogger = logging.getLogger('findField')
-    localLogger.debug('Will search for field %s', fieldToFind)
+    localLogger = logging.getLogger ('findField')
+    localLogger.debug ('Will search for field %s', fieldToFind)
     
     foundFields = list ()
     
     # We need to search this stuff one by one.
     # A loop, and text processing. A recipe for low performance code.
     for field in metadata:
-        processedField = field.strip().split(':')
-        localLogger.debug('Field %s is processed as %s.', field, processedField)
+        processedField = field.strip ().split (':')
+        localLogger.debug ('Field %s is processed as %s.', field, processedField)
         
         for processedFieldElement in processedField:
-            if str(processedFieldElement) == fieldToFind:
+            if str (processedFieldElement) == fieldToFind:
                 localLogger.debug('Field %s contains the field name we are searching for, adding to results.', field)
                 foundFields.append(metadata[field])
         
@@ -105,18 +104,46 @@ def findField (metadata, fieldToFind):
 This function detects the filesystem of the current folder and returns the string of the FS.
 User is free to do what it wishes to do with the filesystem. 
 '''
-def getLocalFileSystemName ():
+def getLocalFileSystemType ():
     # First get the logger.
-    localLogger = logging.getLogger ("getLocalFileSystemName")
+    localLogger = logging.getLogger ("getLocalFileSystemType")
     
     # Then get the current working directory.
     currentWorkingDirectory = os.getcwd ()
-    
-    # Then get the disks.
-    
     localLogger.debug ('Currently working on directory %s.', currentWorkingDirectory)
     
-    pass
+    # To be able to find the filesystem, we need to find the mount point first.
+    # The simplest way to do it is to iteratively search back thorough the current working directory
+    # and iteratively call isMount(). When the mount point is found, we can search this inside the psUtil's filesytem
+    # list, and get the name of our filesystem.
+    
+    # This is a small, simple while loop to get the current mountpoint.
+    mountPoint = currentWorkingDirectory
+    
+    while os.path.ismount (mountPoint) == False:
+        
+        splitPath = os.path.split (mountPoint)
+        
+        if splitPath[1] == '':
+            localLogger.warn ('Cannot detect filesystem automatically. will assume full character set.')
+            return None
+        
+        mountPoint = os.path.split (mountPoint)[0]
+    
+    localLogger.debug ('Mount point for this device is %s.', mountPoint)
+    
+    # At this point we got the mount point for the filesystem. If there's no mount point, we've returned None.
+    # We will use psutil to get the mount table and the relevant filesystem information.
+        
+    for disk in psutil.disk_partitions ():
+        if disk.mountpoint == mountPoint:
+            localLogger.debug ('Filesystem for mount point %s is %s.', disk.mountpoint, disk.fstype)
+            return disk.fstype 
+    
+    # If we cannot find the filesystem type, write a warning and return None.
+    locallogger.warn ('Cannot locate filesystem type for mount point %s. Will assume full character set.')
+    
+    return None
 
 
 if __name__ == '__main__':
@@ -198,7 +225,7 @@ if __name__ == '__main__':
     localLogger.debug ('Files to be processed are: %s.', arguments.FILE)
 
     # Let's get the filesystem name that we're working on.
-    print (getLocalFileSystemName())
+    print (getLocalFileSystemType())
 
     # File path handling is not easy. We need to expand the vars, the user and glob it to see how many files we get.
     # Oh, don't forget the recursive switch too.
