@@ -144,6 +144,20 @@ def getLocalFileSystemType ():
     locallogger.warn ('Cannot locate filesystem type for mount point %s.')
     
     return None
+'''
+This function accepts a filesystem type returned by getLocalFileSystemType and returns a dictionary of
+flags to be passed to the normalizeFileName function. 
+'''
+def returnFileRenamingFlags (fileSystemType):
+    # First of all, create the flag set, and set their default values.
+    renamingFlags = dict ()
+    
+    renamingFlags['fat32Safe'] = False
+    
+    if fileSystemType == 'vfat' or fileSystemType == 'fat32' or fileSystemType == 'exfat':
+        renamingFlags['fat32Safe'] = True
+    
+    return renamingFlags
 
 
 if __name__ == '__main__':
