@@ -148,13 +148,24 @@ def getLocalFileSystemType ():
 This function accepts a filesystem type returned by getLocalFileSystemType and returns a dictionary of
 flags to be passed to the normalizeFileName function. 
 '''
-def returnFileRenamingFlags (fileSystemType):
-    # First of all, create the flag set, and set their default values.
+def setFileRenamingFlags (fileSystemType):
+    localLogger = logging.getLogger ('setFileRenamingFlags')
+    
+    # To be able to accurately compare filesystem names, we need them to be lower case.
+    fileSystemType = fileSystemType.lower ()
+    
+    # Create the flag set, and set their default values.
     renamingFlags = dict ()
     
     renamingFlags['fat32Safe'] = False
     
+    # FAT family of filesystems.
     if fileSystemType == 'vfat' or fileSystemType == 'fat32' or fileSystemType == 'exfat':
+        renamingFlags['fat32Safe'] = True
+    
+    # NTFS also needs fat32Safe flag, since Windows restricts file names to the same set.
+    if fileSystemType == 'ntfs':
+        localLogger.warn ('Since Windows restricts the characters which can be used in file names, fat32 restricted character set is enabled. To override, please disable automatic filesystem detection.')
         renamingFlags['fat32Safe'] = True
     
     return renamingFlags
