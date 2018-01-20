@@ -36,6 +36,19 @@ import psutil
 # 3: Exiftool is not found.
 
 '''
+This class contains a set of files to be renamed alongside the flags and other information required for
+a successful renaming process. Every expanded glob is filled into an fileSet class alongside the renaming
+flags (for replacing the restricted characters for that particular filesystem). 
+'''
+class fileSet:
+    def __init__ (self):
+        self.filesToRename = list ()
+        
+        # Flags are stored in open form for now.
+        # Console friendliness is a global flag and deliberately omitted here.
+        self.fat32safe = False;
+
+'''
 normalizeFileName: Check the filename string and modify the string if required.
 
 This function will make sure that the file names are UNIX safe, and will support more
