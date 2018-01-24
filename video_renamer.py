@@ -46,7 +46,7 @@ class fileSet:
         
         # Flags are stored in open form for now.
         # Console friendliness is a global flag and deliberately omitted here.
-        self.fat32safe = False;
+        self.fat32Safe = False;
 
 '''
 normalizeFileName: Check the filename string and modify the string if required.
@@ -117,13 +117,12 @@ def findField (metadata, fieldToFind):
 This function detects the filesystem of the current folder and returns the string of the FS.
 User is free to do what it wishes to do with the filesystem. 
 '''
-def getLocalFileSystemType ():
+def getLocalFileSystemType (pathToCheck):
     # First get the logger.
     localLogger = logging.getLogger ("getLocalFileSystemType")
     
     # Then get the current working directory.
-    currentWorkingDirectory = os.getcwd ()
-    localLogger.debug ('Currently working on directory %s.', currentWorkingDirectory)
+    localLogger.debug ('Will found file system for directory %s.', pathToCheck)
     
     # To be able to find the filesystem, we need to find the mount point first.
     # The simplest way to do it is to iteratively search back thorough the current working directory
@@ -131,11 +130,13 @@ def getLocalFileSystemType ():
     # list, and get the name of our filesystem.
     
     # This is a small, simple while loop to get the current mountpoint.
-    mountPoint = currentWorkingDirectory
+    mountPoint = pathToCheck
     
     while os.path.ismount (mountPoint) == False:
         
         splitPath = os.path.split (mountPoint)
+        
+        localLogger.debug ('%s', splitPath[1])
         
         if splitPath[1] == '':
             localLogger.warn ('Cannot find the mount point for filesystem detection.')
@@ -196,7 +197,7 @@ if __name__ == '__main__':
     # Optional arguments are below.
     argumentParser.add_argument ('--alternative-exiftool', metavar = 'EXIFTOOL_PATH', help = 'Use an alternative exiftool binary, instead of the installed one.')
     # Count gives the number of '-v' s provided. So one can handle the verbosity easily.
-    argumentParser.add_argument ('-n', '--no-fs-detect', help = 'Do not detect filesystem type automatically', action = 'store_false')
+    argumentParser.add_argument ('-n', '--no-fs-detect', help = 'Do not detect filesystem type automatically', action = 'store_true')
     argumentParser.add_argument ('--fat32-safe', help = 'Rename files only with FAT32 safe characters.', action = 'store_true')
     argumentParser.add_argument ('--console-friendly', help = 'Do not use characters which need escaping in shells.', action = 'store_true')
     argumentParser.add_argument ('-r', '--recursive', help = 'Work recursively on the given path.', action = 'store_true')
@@ -238,7 +239,7 @@ if __name__ == '__main__':
         # If the user has explicitly wanted to use FAT32 safety, turn automatic FS detection off.
         if arguments.fat32_safe == True:
             localLogger.debug('FAT32 safety is manually enabled, turning automatic file system detection off.')
-            arguments.no_fs_detect = False;
+            arguments.no_fs_detect = True;
                
         # Disable logging if quiet switch is set.
         if arguments.quiet == True:
@@ -250,73 +251,97 @@ if __name__ == '__main__':
         print ('Something about disk I/O went bad: ' + str(exception), file = sys.stderr)
         sys.exit(1)
 
-    # Need to expand the files with glob first.
-    filesToWorkOn = list ()
-
     # Let's print some information about the passed parameters.
     localLogger.debug('Recursiveness is set to %s.', arguments.recursive)
     localLogger.debug('FAT32 safety is set to %s.', arguments.fat32_safe)
-    localLogger.debug('Automatic filesystem detection is set to %s.', arguments.no_fs_detect)
+    localLogger.debug('Automatic filesystem detection is set to %s.', not(arguments.no_fs_detect))
     localLogger.debug('Console friendliness is set to %s.', arguments.console_friendly)
 
     # Let's get the passed files from arguments, and work on them.
-    localLogger.debug ('Files to be processed are: %s.', arguments.FILE)
+    localLogger.debug ('Files to be processed are: %s.', str(arguments.FILE)[1:-1])
 
-    # Let's get the filesystem name that we're working on.
-    print (getLocalFileSystemType())
+    # Need to expand the files with glob first.
+    fileSetsToWorkOn = list ()
 
     # File path handling is not easy. We need to expand the vars, the user and glob it to see how many files we get.
     # Oh, don't forget the recursive switch too.
     for inputFile in arguments.FILE:
         possibleFiles = glob.iglob (os.path.expanduser (os.path.expandvars (inputFile)), recursive = arguments.recursive)
 
+        # Create the new file set here and first set its flags, then stuff the files in.
+        newFileSet = fileSet ()
+
+        # Count the files to be renamed.
+        totalFileCount = 0
+
+        # Get the filesystem for this file glob and get their required flags for successful renaming.
+        if arguments.no_fs_detect == False:
+            fileSystemForGlob = getLocalFileSystemType(os.path.expanduser (os.path.expandvars (inputFile)))
+            localLogger.debug ('File system for this file glob is %s.', fileSystemForGlob)
+
+            fileRenamingFlagsForGlob = setFileRenamingFlags(fileSystemForGlob)
+            
+            # Set the flags one by one here.
+            newFileSet.fat32safe = fileRenamingFlagsForGlob['fat32Safe']
+        else:
+            localLogger.debug ('Automatic filesystem detection is off, skipping detection.')
+        
         # Not all returned glob paths are existing files. We need to verify each one.
         # The loop is here, because glob expands regex to independent files.
         for possibleFile in possibleFiles:
             if os.path.isfile (possibleFile):
-                filesToWorkOn.append(possibleFile)
-
+                newFileSet.filesToRename.append(possibleFile)
+        
+        # Add the file count to the total.
+        totalFileCount = totalFileCount + len(newFileSet.filesToRename)
+        
+        localLogger.debug ('Final file list for glob %s is: %s', os.path.expanduser (os.path.expandvars (inputFile)), str(newFileSet.filesToRename)[1:-1])
+        
+        # Append the object into the file set.
+        fileSetsToWorkOn.append(newFileSet)
+    
     # This is the final list we work on. It may be empty or, well... long.
-    localLogger.debug ('Final file list is: %s', filesToWorkOn)
-    localLogger.info ('Matched %d files to rename.', len(filesToWorkOn))
+    localLogger.info ('Matched %d files to rename.', totalFileCount)
 
 
-    if len(filesToWorkOn) == 0:
+    if totalFileCount == 0:
         localLogger.error ('No files match againts the given FILE arguments, aborting.')
         sys.exit (2)
         
     # If the logger is up, we can start building the PyExifTool wrapper.
-    try:
-        with exiftool.ExifTool(executable_ = arguments.alternative_exiftool) as et:
-            fileMetadata = et.get_metadata_batch(filesToWorkOn)
-
-            for metadata in fileMetadata:
-                # Need to search for a title field here. Let's take a look.
-                requestedField = findField(metadata, 'Title')
-                                                
-                # We may have metadata collision, warn people.                                                
-                if len(requestedField) > 1:
-                    localLogger.warning ('There a more than one field which contains the title. Please make sure the file is renamed correctly.')
-                
-                if len(requestedField) == 0:
-                    localLogger.error ('No matching fields found for file %s, will skip.', metadata['File:FileName'])
-                    continue
-                                
-                # Get the normalized file name and add the extension. Make extension lower case to make things look better.
-                normalizedFileName = normalizeFileName(requestedField[0], fat32Safe = arguments.fat32_safe, consoleFriendly = arguments.console_friendly) + '.' + metadata['File:FileTypeExtension'].lower()
-                
-                # Talk to me!
-                localLogger.info('Will rename file %s to %s.', metadata['File:FileName'], normalizedFileName )
-                         
-                if arguments.dry_run == False:
-                    try:
-                        os.rename(metadata['File:Directory'] + '/' + metadata['File:FileName'], metadata['File:Directory'] + '/' + normalizedFileName)
-                    except OSError as exception:
-                        if exception.errno == 22:
-                            localLogger.error('Cannot rename file "%s", some characters may not be supported on this filesystem. Please try --fat32-safe.', metadata['File:FileName'])
-                        else:
-                            localLogger.error("Cannot rename file %s, an exception ocurred: %s", metadata['File:FileName'], exception)
-                
-    except FileNotFoundError as exception:
-        localLogger.error (exception)
-        sys.exit (3)
+    
+    for fileGlob in fileSetsToWorkOn:
+        try:
+            with exiftool.ExifTool(executable_ = arguments.alternative_exiftool) as et:
+                fileMetadata = et.get_metadata_batch(fileGlob.filesToRename)
+    
+                for metadata in fileMetadata:
+                    # Need to search for a title field here. Let's take a look.
+                    requestedField = findField(metadata, 'Title')
+                                                    
+                    # We may have metadata collision, warn people.                                                
+                    if len(requestedField) > 1:
+                        localLogger.warning ('There a more than one field which contains the title. Please make sure the file is renamed correctly.')
+                    
+                    if len(requestedField) == 0:
+                        localLogger.error ('No matching fields found for file %s, will skip.', metadata['File:FileName'])
+                        continue
+                                    
+                    # Get the normalized file name and add the extension. Make extension lower case to make things look better.
+                    normalizedFileName = normalizeFileName(requestedField[0], fat32Safe = fileGlob.fat32Safe, consoleFriendly = arguments.console_friendly) + '.' + metadata['File:FileTypeExtension'].lower()
+                    
+                    # Talk to me!
+                    localLogger.info('Will rename file %s to %s.', metadata['File:FileName'], normalizedFileName )
+                             
+                    if arguments.dry_run == False:
+                        try:
+                            os.rename(os.path.join(metadata['File:Directory'], metadata['File:FileName']), os.path.join(metadata['File:Directory'], normalizedFileName))
+                        except OSError as exception:
+                            if exception.errno == 22:
+                                localLogger.error('Cannot rename file "%s", some characters may not be supported on this filesystem. Please try --fat32-safe.', metadata['File:FileName'])
+                            else:
+                                localLogger.error("Cannot rename file %s, an exception ocurred: %s", metadata['File:FileName'], exception)
+                    
+        except FileNotFoundError as exception:
+            localLogger.error (exception)
+            sys.exit (3)
