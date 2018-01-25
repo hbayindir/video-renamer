@@ -115,36 +115,77 @@ def findField (metadata, fieldToFind):
 
 '''
 This function detects the filesystem of the current folder and returns the string of the FS.
-User is free to do what it wishes to do with the filesystem. 
+User is free to do what it wishes to do with the filesystem.
+
+The algorithm is a bit tricky, so it begs for some explanation.
+
+We have some scenarios for pathToCheck:
+a) pathToCheck is a mount point, an absolute path or a directory under a different mount point.
+b) pathToCheck is a single file, or directory with a relative path, but the path has no mount point.
+   However current working directory + pathToCheck is absolute path for target file.
+c) current working directory + pathToCheck is not absolute path for target file, and we only have current
+   working directory as our only absolute path at hand.
+   
+Scenarios a & b can provide reliable FS detection, and c can provide us a best guess. If all fails, return None.
+Scenario c is in fact a fail-safe and return the filesystem type of the OS running underneath.
+It's a good enough guess for most cases.
+
+The algorithm will generate the paths for all scenarios and push them to a list.
+We will iterate over the list with the same algorithm over and over, and will detect the filesystem.
+
+The path for scenario b will be generated if and only if current working directory + pathToCheck exists. 
 '''
 def getLocalFileSystemType (pathToCheck):
     # First get the logger.
     localLogger = logging.getLogger ("getLocalFileSystemType")
     
+    # Provide some information.    
+    localLogger.debug ('Will find file system for path %s.', pathToCheck)
+    
     # Then get the current working directory.
-    localLogger.debug ('Will found file system for directory %s.', pathToCheck)
+    currentPath = os.getcwd ();
+    localLogger.debug ('We are running under path \'%s\'', os.getcwd())
+    
+    # Create storage variables beforehand.
+    pathsToCheck = list()
+    
+    # Append the most naive path first.
+    localLogger.debug ('Appending %s to path list.', pathToCheck)
+    pathsToCheck.append (pathToCheck)
+    
+    # Then check whether the current working directory + pathToCheck exists, and if exists, append its path.
+    if os.path.exists (os.path.join (currentPath, pathToCheck)):
+        localLogger.debug ('%s exists as a path, appending to the list.', os.path.join (currentPath, pathToCheck))
+        pathsToCheck.append (os.path.join (currentPath, pathToCheck))
+    
+    # Add the latest, fail-safe option.
+    localLogger.debug ('Appending path %s to list as a fail-safe.', currentPath)
     
     # To be able to find the filesystem, we need to find the mount point first.
     # The simplest way to do it is to iteratively search back thorough the current working directory
     # and iteratively call isMount(). When the mount point is found, we can search this inside the psUtil's filesytem
     # list, and get the name of our filesystem.
     
+    # TODO: Re-write this loop set to fix the infinite loop problem.
     # This is a small, simple while loop to get the current mountpoint.
-    mountPoint = pathToCheck
-    
-    while os.path.ismount (mountPoint) == False:
+    for path in pathsToCheck:
         
-        splitPath = os.path.split (mountPoint)
+        mountPoint = path
         
-        localLogger.debug ('%s', splitPath[1])
+        while os.path.ismount (mountPoint) == False:
+            
+            splitPath = os.path.split (mountPoint)
+            
+            localLogger.debug ('%s', splitPath[1])
+            
+            if splitPath[1] == '':
+                localLogger.warn ('Cannot find the mount point under path %s for filesystem detection.', path)
+                break # We have finished the search for this path, move to next.
+            
+            mountPoint = os.path.split (mountPoint)[0]
         
-        if splitPath[1] == '':
-            localLogger.warn ('Cannot find the mount point for filesystem detection.')
-            return None
-        
-        mountPoint = os.path.split (mountPoint)[0]
-    
-    localLogger.debug ('Mount point for this device is %s.', mountPoint)
+        localLogger.debug ('Mount point for this device is %s.', mountPoint)
+        break # We have found the mount point, break the for loop for efficiency.
     
     # At this point we got the mount point for the filesystem. If there's no mount point, we've returned None.
     # We will use psutil to get the mount table and the relevant filesystem information.
