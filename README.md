@@ -1,3 +1,5 @@
+**Note:** Currently this project is in hiatus. Original [exiftool](https://www.sno.phy.queensu.ca/~phil/exiftool/) can do all the [renaming](https://www.sno.phy.queensu.ca/~phil/exiftool/#filename) and more. If a feature not supported by the Exiftool is required, this project will be resurrected again.
+
 # Video Renamer
 
 Video Renamer is a tool to rename video files according to their meta data.
